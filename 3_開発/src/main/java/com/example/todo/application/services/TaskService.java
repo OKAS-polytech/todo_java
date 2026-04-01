@@ -10,17 +10,23 @@ import java.util.stream.Collectors;
 /**
  * TODOリストのアプリケーションサービス（全ポート実装版）。
  */
-public class TaskService implements CreateTaskInputPort, GetTasksInputPort, UpdateTaskInputPort, DeleteTaskInputPort {
+import com.example.todo.application.ports.out.GroupRepositoryPort;
+
+public class TaskService implements CreateTaskInputPort, GetTasksInputPort, UpdateTaskInputPort, DeleteTaskInputPort, GetGroupTasksInputPort {
 
     private final TaskRepositoryPort repository;
+    private final GroupRepositoryPort groupRepository;
 
-    public TaskService(TaskRepositoryPort repository) {
+    public TaskService(TaskRepositoryPort repository, GroupRepositoryPort groupRepository) {
         this.repository = repository;
+        this.groupRepository = groupRepository;
     }
 
     @Override
     public void execute(CreateTaskCommand command) {
         Task task = new Task(
+            command.userId(),
+            command.groupId(),
             command.title(),
             command.content(),
             command.dueDate(),
@@ -59,6 +65,22 @@ public class TaskService implements CreateTaskInputPort, GetTasksInputPort, Upda
 
     @Override
     public void deleteCompleted() {
-        repository.deleteCompleted();
+        // デフォルトは自分のタスクのみ削除（ログインユーザーIDが必要なため、実引数で渡すように変更）
+        throw new UnsupportedOperationException("userIdを指定してください");
+    }
+
+    public void deleteCompleted(Long userId) {
+        repository.deleteCompleted(userId);
+    }
+
+    @Override
+    public List<TaskDTO> execute(Long groupId, Long userId) {
+        // グループメンバーであることを確認
+        if (!groupRepository.isMember(groupId, userId)) {
+            throw new IllegalArgumentException("このグループに所属していません。");
+        }
+        return repository.findByGroupId(groupId).stream()
+                .map(TaskDTO::fromDomain)
+                .collect(Collectors.toList());
     }
 }

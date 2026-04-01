@@ -11,6 +11,7 @@ public interface TaskRepositoryPort {
     void save(Task task);
     Task findById(Long id);
     List<Task> findAll(SearchCriteria criteria);
+    List<Task> findByGroupId(Long groupId);
     void delete(Long id);
-    int deleteCompleted();
+    int deleteCompleted(Long userId);
 }

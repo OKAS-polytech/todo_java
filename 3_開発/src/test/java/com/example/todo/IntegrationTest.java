@@ -5,6 +5,7 @@ import com.example.todo.application.dtos.SearchCriteria;
 import com.example.todo.application.dtos.TaskDTO;
 import com.example.todo.application.services.TaskService;
 import com.example.todo.domain.models.Priority;
+import com.example.todo.infrastructure.persistence.SQLiteGroupRepository;
 import com.example.todo.infrastructure.persistence.SQLiteTaskRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +28,8 @@ public class IntegrationTest {
     @BeforeEach
     void setUp() {
         SQLiteTaskRepository repository = new SQLiteTaskRepository(DB_FILE);
-        service = new TaskService(repository);
+        SQLiteGroupRepository groupRepo = new SQLiteGroupRepository(DB_FILE);
+        service = new TaskService(repository, groupRepo);
     }
 
     @AfterEach
@@ -40,10 +42,10 @@ public class IntegrationTest {
     @DisplayName("IT-01: サービス経由でのタスク作成と一覧取得の連携")
     void testCreateAndListIntegration() {
         // 1. 作成
-        service.execute(new CreateTaskCommand("ITタスク", "結合テスト用", null, Priority.HIGH));
+        service.execute(new CreateTaskCommand(1L, null, "ITタスク", "結合テスト用", null, Priority.HIGH));
 
         // 2. 取得
-        List<TaskDTO> tasks = service.execute(new SearchCriteria("created_at", null, null, null));
+        List<TaskDTO> tasks = service.execute(new SearchCriteria(1L, "created_at", null, null, null));
 
         assertEquals(1, tasks.size());
         assertEquals("ITタスク", tasks.get(0).title());
@@ -53,11 +55,11 @@ public class IntegrationTest {
     @Test
     @DisplayName("IT-02: フィルタ条件のSQL連携（ステータス・優先度）")
     void testFilterIntegration() {
-        service.execute(new CreateTaskCommand("高優先度", null, null, Priority.HIGH));
-        service.execute(new CreateTaskCommand("低優先度", null, null, Priority.LOW));
+        service.execute(new CreateTaskCommand(1L, null, "高優先度", null, null, Priority.HIGH));
+        service.execute(new CreateTaskCommand(1L, null, "低優先度", null, null, Priority.LOW));
 
         // 優先度フィルタ
-        List<TaskDTO> highTasks = service.execute(new SearchCriteria(null, null, "HIGH", null));
+        List<TaskDTO> highTasks = service.execute(new SearchCriteria(1L, null, null, "HIGH", null));
         assertEquals(1, highTasks.size());
         assertEquals("高優先度", highTasks.get(0).title());
     }

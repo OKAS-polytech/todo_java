@@ -24,23 +24,27 @@ import static org.mockito.Mockito.*;
 /**
  * TaskServiceの単体テスト。リポジトリはモック化する。
  */
+import com.example.todo.application.ports.out.GroupRepositoryPort;
+
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
     @Mock
     private TaskRepositoryPort repository;
+    @Mock
+    private GroupRepositoryPort groupRepository;
 
     private TaskService taskService;
 
     @BeforeEach
     void setUp() {
-        taskService = new TaskService(repository);
+        taskService = new TaskService(repository, groupRepository);
     }
 
     @Test
     @DisplayName("UC1: TODO作成が正しく実行され、リポジトリの保存メソッドが呼ばれること")
     void testCreateTask() {
-        CreateTaskCommand command = new CreateTaskCommand("テスト", "内容", null, Priority.MEDIUM);
+        CreateTaskCommand command = new CreateTaskCommand(1L, null, "テスト", "内容", null, Priority.MEDIUM);
 
         taskService.execute(command);
 
@@ -51,10 +55,10 @@ class TaskServiceTest {
     @Test
     @DisplayName("UC2: TODO一覧取得が正しく実行され、DTOのリストが返ること")
     void testGetTasks() {
-        Task mockTask = new Task(1L, "タイトル", "内容", null, Priority.LOW, Status.TODO, LocalDateTime.now());
+        Task mockTask = new Task(1L, 1L, null, "タイトル", "内容", null, Priority.LOW, Status.TODO, LocalDateTime.now());
         when(repository.findAll(any(SearchCriteria.class))).thenReturn(List.of(mockTask));
 
-        SearchCriteria criteria = new SearchCriteria(null, null, null, null);
+        SearchCriteria criteria = new SearchCriteria(1L, null, null, null, null);
         List<TaskDTO> result = taskService.execute(criteria);
 
         assertEquals(1, result.size());

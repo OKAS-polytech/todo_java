@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
  */
 public class Task {
     private Long id;
+    private Long userId;
+    private Long groupId;
     private String title;
     private String content;
     private LocalDateTime dueDate;
@@ -16,15 +18,12 @@ public class Task {
     private LocalDateTime createdAt;
 
     /**
-     * 新規タスク作成用のコンストラクタ。
-     * @param title タイトル（必須）
-     * @param content 内容
-     * @param dueDate 期限
-     * @param priority 優先度
-     * @throws IllegalArgumentException タイトルが空の場合
+     * 新規タスク作成用のコンストラクタ (ver2: userId, groupId を追加)
      */
-    public Task(String title, String content, LocalDateTime dueDate, Priority priority) {
+    public Task(Long userId, Long groupId, String title, String content, LocalDateTime dueDate, Priority priority) {
         validateTitle(title);
+        this.userId = userId;
+        this.groupId = groupId;
         this.title = title;
         this.content = content;
         this.dueDate = dueDate;
@@ -36,8 +35,10 @@ public class Task {
     /**
      * 全属性を指定するコンストラクタ（再構築用）。
      */
-    public Task(Long id, String title, String content, LocalDateTime dueDate, Priority priority, Status status, LocalDateTime createdAt) {
+    public Task(Long id, Long userId, Long groupId, String title, String content, LocalDateTime dueDate, Priority priority, Status status, LocalDateTime createdAt) {
         this.id = id;
+        this.userId = userId;
+        this.groupId = groupId;
         this.title = title;
         this.content = content;
         this.dueDate = dueDate;
@@ -79,6 +80,8 @@ public class Task {
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; }
+    public Long getGroupId() { return groupId; }
     public String getTitle() { return title; }
     public String getContent() { return content; }
     public LocalDateTime getDueDate() { return dueDate; }

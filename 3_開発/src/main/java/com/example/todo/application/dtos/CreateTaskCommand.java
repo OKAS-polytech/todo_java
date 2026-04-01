@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
  * タスク作成のためのコマンドオブジェクト。
  */
 public record CreateTaskCommand(
+    Long userId,
+    Long groupId,
     String title,
     String content,
     LocalDateTime dueDate,

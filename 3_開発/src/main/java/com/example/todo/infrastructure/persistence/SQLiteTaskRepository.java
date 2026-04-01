@@ -29,6 +29,8 @@ public class SQLiteTaskRepository implements TaskRepositoryPort {
         String sql = """
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                group_id INTEGER,
                 title TEXT NOT NULL,
                 content TEXT,
                 due_date TEXT,
@@ -55,15 +57,17 @@ public class SQLiteTaskRepository implements TaskRepositoryPort {
     }
 
     private void insert(Task task) {
-        String sql = "INSERT INTO tasks(title, content, due_date, priority, status, created_at) VALUES(?,?,?,?,?,?)";
+        String sql = "INSERT INTO tasks(user_id, group_id, title, content, due_date, priority, status, created_at) VALUES(?,?,?,?,?,?,?,?)";
         try (Connection conn = DriverManager.getConnection(url);
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, task.getTitle());
-            pstmt.setString(2, task.getContent());
-            pstmt.setString(3, task.getDueDate() != null ? task.getDueDate().format(formatter) : null);
-            pstmt.setString(4, task.getPriority().name());
-            pstmt.setString(5, task.getStatus().name());
-            pstmt.setString(6, task.getCreatedAt().format(formatter));
+            pstmt.setObject(1, task.getUserId());
+            pstmt.setObject(2, task.getGroupId());
+            pstmt.setString(3, task.getTitle());
+            pstmt.setString(4, task.getContent());
+            pstmt.setString(5, task.getDueDate() != null ? task.getDueDate().format(formatter) : null);
+            pstmt.setString(6, task.getPriority().name());
+            pstmt.setString(7, task.getStatus().name());
+            pstmt.setString(8, task.getCreatedAt().format(formatter));
             pstmt.executeUpdate();
 
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
@@ -111,8 +115,9 @@ public class SQLiteTaskRepository implements TaskRepositoryPort {
 
     @Override
     public List<Task> findAll(SearchCriteria criteria) {
-        StringBuilder sql = new StringBuilder("SELECT * FROM tasks WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT * FROM tasks WHERE user_id = ?");
         List<Object> params = new ArrayList<>();
+        params.add(criteria.userId());
 
         if (criteria.filterStatus() != null && !criteria.filterStatus().isEmpty()) {
             sql.append(" AND status = ?");
@@ -172,10 +177,27 @@ public class SQLiteTaskRepository implements TaskRepositoryPort {
     }
 
     @Override
-    public int deleteCompleted() {
-        String sql = "DELETE FROM tasks WHERE status = 'DONE'";
+    public List<Task> findByGroupId(Long groupId) {
+        String sql = "SELECT * FROM tasks WHERE group_id = ? ORDER BY created_at DESC";
+        List<Task> tasks = new ArrayList<>();
         try (Connection conn = DriverManager.getConnection(url);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, groupId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    tasks.add(mapResultSetToTask(rs));
+                }
+            }
+        } catch (SQLException e) { throw new RuntimeException(e); }
+        return tasks;
+    }
+
+    @Override
+    public int deleteCompleted(Long userId) {
+        String sql = "DELETE FROM tasks WHERE status = 'DONE' AND user_id = ?";
+        try (Connection conn = DriverManager.getConnection(url);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, userId);
             return pstmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("一括削除失敗", e);
@@ -185,6 +207,8 @@ public class SQLiteTaskRepository implements TaskRepositoryPort {
     private Task mapResultSetToTask(ResultSet rs) throws SQLException {
         return new Task(
             rs.getLong("id"),
+            rs.getLong("user_id"),
+            rs.getObject("group_id") != null ? rs.getLong("group_id") : null,
             rs.getString("title"),
             rs.getString("content"),
             rs.getString("due_date") != null ? LocalDateTime.parse(rs.getString("due_date"), formatter) : null,
